@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="application-name" content="Scrivia" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Scrivia" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Scrivia</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar" id="topbar">
+      <div class="topbarBase" aria-hidden="true"></div>
+      <div class="topbarFill" aria-hidden="true"></div>
+
+      <button class="topbtn hidden" id="btnBack" type="button" aria-label="Zurück">←</button>
+
+      <div class="topcenter" aria-live="polite">
+        <div class="topTitle" id="topTitle">Scrivia</div>
+        <div class="topSub" id="topSub"></div>
+      </div>
+
+      <div class="topActions">
+        <button class="topbtn hidden" id="btnAbort" type="button" aria-label="Quiz abbrechen" title="Quiz abbrechen">×</button>
+      </div>
+    </header>
+
+    <main class="view" id="viewHome" aria-label="Startseite">
+      <section class="brandCard" aria-label="Scrivia">
+        <div class="brandMark" aria-hidden="true">S</div>
+        <h1>Scrivia</h1>
+      </section>
+
+      <button class="primaryAction" id="btnNewQuiz" type="button" disabled>Neues Quiz</button>
+      <p class="loadState hidden" id="loadHint" aria-live="polite"></p>
+    </main>
+
+    <main class="view hidden" id="viewSetup" aria-label="Quiz erstellen">
+      <form class="setupForm" id="setupForm">
+        <section class="panel compactPanel">
+          <div class="setupTop">
+            <h1>Quiz</h1>
+            <div class="countBox">
+              <label class="fieldLabel" for="questionCount">Anzahl</label>
+              <input class="numberInput" id="questionCount" type="number" min="1" max="999" step="1" inputmode="numeric" value="10" />
+            </div>
+          </div>
+          <div class="quickCountRow" aria-label="Schnellauswahl Fragenanzahl">
+            <button type="button" class="miniBtn" data-count="5">5</button>
+            <button type="button" class="miniBtn" data-count="10">10</button>
+            <button type="button" class="miniBtn" data-count="20">20</button>
+            <button type="button" class="miniBtn" data-count="50">50</button>
+          </div>
+          <div class="availableLine" id="availableLine">0</div>
+        </section>
+
+        <section class="panel">
+          <div class="sectionHead tight">
+            <div class="fieldLabel">Schwierigkeit</div>
+            <button class="miniBtn" id="btnDifficultyAll" type="button">Alle</button>
+          </div>
+          <div class="chipGrid threeCols" id="difficultyChips" aria-label="Schwierigkeiten wählen"></div>
+        </section>
+
+        <section class="panel">
+          <div class="sectionHead">
+            <div class="fieldLabel">Bücher</div>
+            <div class="miniActions" aria-label="Schnellauswahl Bücher">
+              <button type="button" class="miniBtn" id="btnBooksAll">Alle</button>
+              <button type="button" class="miniBtn" id="btnBooksAT">AT</button>
+              <button type="button" class="miniBtn" id="btnBooksNT">NT</button>
+              <button type="button" class="miniBtn ghost" id="btnBooksNone">Keine</button>
+            </div>
+          </div>
+          <div class="bookGrid" id="bookGrid" aria-label="Bücher wählen"></div>
+        </section>
+
+        <section class="panel">
+          <div class="sectionHead">
+            <div class="fieldLabel">Kategorien</div>
+            <div class="miniActions" aria-label="Schnellauswahl Kategorien">
+              <button type="button" class="miniBtn" id="btnCategoriesAll">Alle</button>
+              <button type="button" class="miniBtn ghost" id="btnCategoriesNone">Keine</button>
+            </div>
+          </div>
+          <div class="chipGrid" id="categoryChips" aria-label="Kategorien wählen"></div>
+        </section>
+
+        <div class="formError" id="setupError" aria-live="polite"></div>
+
+        <div class="actionsRow bottomActions">
+          <button class="pill" id="btnSetupCancel" type="button">Abbrechen</button>
+          <button class="pill primary" id="btnStartQuiz" type="submit">Starten</button>
+        </div>
+      </form>
+    </main>
+
+    <main class="view hidden" id="viewQuiz" aria-label="Quiz">
+      <section class="questionCard panel" id="questionCard">
+        <div class="questionKicker" id="questionKicker">Wähle eine Antwort</div>
+        <h2 class="questionText" id="questionText"></h2>
+        <div class="choices" id="choices"></div>
+      </section>
+
+      <section class="feedback panel hidden" id="feedback" aria-live="polite">
+        <div class="feedbackTitle" id="feedbackTitle"></div>
+        <p id="feedbackText"></p>
+        <p class="referenceLine" id="referenceLine"></p>
+        <button class="primaryAction smallAction" id="btnNext" type="button">Weiter</button>
+      </section>
+    </main>
+
+    <main class="view hidden" id="viewResult" aria-label="Ergebnis">
+      <section class="resultCard panel">
+        <div class="resultBadge" id="resultBadge">✓</div>
+        <h1>Fertig</h1>
+        <p id="resultText"></p>
+        <div class="resultStats" id="resultStats"></div>
+      </section>
+
+      <div class="actionsRow bottomActions stackOnSmall">
+        <button class="pill" id="btnResultSetup" type="button">Neu konfigurieren</button>
+        <button class="pill primary" id="btnResultAgain" type="button">Nochmal</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
