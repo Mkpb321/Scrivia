@@ -4,6 +4,47 @@
   const STORAGE_KEY = "scrivia_settings_v4";
   const DIFFICULTY_ORDER = ["leicht", "mittel", "schwer"];
   const TESTAMENT_LABEL = { at: "AT", nt: "NT" };
+  const SOFT_A = 0.35;
+  const STRONG_A = 1;
+
+  const BOOK_ORDER = [
+    "gen", "exo", "lev", "num", "deu", "jos", "jdg", "rut", "1sa", "2sa", "1ki", "2ki",
+    "1ch", "2ch", "ezr", "neh", "est", "job", "psa", "pro", "ecc", "sng", "isa", "jer",
+    "lam", "ezk", "dan", "hos", "jol", "amo", "oba", "jon", "mic", "nah", "nam", "hab",
+    "zep", "hag", "zec", "mal", "mat", "mar", "luk", "joh", "act", "rom", "1co", "2co",
+    "gal", "eph", "phi", "col", "1th", "2th", "1ti", "2ti", "tit", "phm", "heb", "jam",
+    "1pe", "2pe", "1jo", "2jo", "3jo", "jud", "rev"
+  ];
+  const BOOK_ORDER_INDEX = new Map(BOOK_ORDER.map((id, index) => [id, index]));
+
+  const GROUP_RGB = {
+    "Gesetz": [140, 192, 255],
+    "AT Geschichte": [122, 230, 185],
+    "Weisheit": [255, 195, 120],
+    "Große Propheten": [188, 150, 255],
+    "Kleine Propheten": [255, 145, 195],
+    "Evangelien": [120, 220, 255],
+    "NT Geschichte": [255, 225, 140],
+    "Paulusbriefe": [150, 160, 255],
+    "Allgemeine Briefe": [180, 255, 150],
+    "Prophetie": [255, 160, 140],
+  };
+
+  const BOOK_GROUP_BY_ID = (() => {
+    const map = new Map();
+    const put = (group, ids) => ids.forEach((id) => map.set(id, group));
+    put("Gesetz", ["gen", "exo", "lev", "num", "deu"]);
+    put("AT Geschichte", ["jos", "jdg", "rut", "1sa", "2sa", "1ki", "2ki", "1ch", "2ch", "ezr", "neh", "est"]);
+    put("Weisheit", ["job", "psa", "pro", "ecc", "sng"]);
+    put("Große Propheten", ["isa", "jer", "lam", "ezk", "dan"]);
+    put("Kleine Propheten", ["hos", "jol", "amo", "oba", "jon", "mic", "nah", "nam", "hab", "zep", "hag", "zec", "mal"]);
+    put("Evangelien", ["mat", "mar", "luk", "joh"]);
+    put("NT Geschichte", ["act"]);
+    put("Paulusbriefe", ["rom", "1co", "2co", "gal", "eph", "phi", "col", "1th", "2th", "1ti", "2ti", "tit", "phm"]);
+    put("Allgemeine Briefe", ["heb", "jam", "1pe", "2pe", "1jo", "2jo", "3jo", "jud"]);
+    put("Prophetie", ["rev"]);
+    return map;
+  })();
 
   const els = {};
   const app = {
@@ -110,7 +151,11 @@
 
     els.btnCategoriesAll.addEventListener("click", () => {
       app.settings.categoryMode = "all";
-      app.settings.selectedCategories = availableCategoriesForSelectedBooks();
+      app.settings.categoryDefaultSelected = true;
+      availableCategoriesForSelectedBooks().forEach((category) => {
+        app.settings.categorySelections[category] = true;
+      });
+      reconcileCategories();
       saveSettings();
       renderCategoryChips();
       updateAvailablePreview();
@@ -118,7 +163,11 @@
 
     els.btnCategoriesNone.addEventListener("click", () => {
       app.settings.categoryMode = "custom";
-      app.settings.selectedCategories = [];
+      app.settings.categoryDefaultSelected = false;
+      availableCategoriesForSelectedBooks().forEach((category) => {
+        app.settings.categorySelections[category] = false;
+      });
+      reconcileCategories();
       saveSettings();
       renderCategoryChips();
       updateAvailablePreview();
@@ -305,6 +354,9 @@
     });
 
     app.books = [...bookMap.values()].sort((a, b) => {
+      const ai = BOOK_ORDER_INDEX.has(a.id) ? BOOK_ORDER_INDEX.get(a.id) : 999;
+      const bi = BOOK_ORDER_INDEX.has(b.id) ? BOOK_ORDER_INDEX.get(b.id) : 999;
+      if (ai !== bi) return ai - bi;
       const testamentOrder = (a.testament === "at" ? 0 : 1) - (b.testament === "at" ? 0 : 1);
       if (testamentOrder !== 0) return testamentOrder;
       return a.name.localeCompare(b.name, "de", { numeric: true, sensitivity: "base" });
@@ -321,6 +373,8 @@
       selectedDifficulties: [...DIFFICULTY_ORDER],
       selectedBooks: [],
       selectedCategories: [],
+      categorySelections: {},
+      categoryDefaultSelected: true,
       categoryMode: "all",
     };
 
@@ -329,13 +383,27 @@
       if (!raw) return defaults;
       const parsed = JSON.parse(raw);
       app.settingsLoaded = true;
+
+      const selectedCategories = Array.isArray(parsed.selectedCategories) ? parsed.selectedCategories : [];
+      let categorySelections = normalizeSelectionMap(parsed.categorySelections);
+      let categoryDefaultSelected = typeof parsed.categoryDefaultSelected === "boolean"
+        ? parsed.categoryDefaultSelected
+        : parsed.categoryMode !== "custom";
+
+      if (Object.keys(categorySelections).length === 0 && selectedCategories.length > 0) {
+        categoryDefaultSelected = parsed.categoryMode === "custom" ? false : true;
+        selectedCategories.forEach((cat) => { categorySelections[String(cat)] = true; });
+      }
+
       return {
         ...defaults,
         ...parsed,
         questionCount: cleanQuestionCount(parsed.questionCount),
         selectedDifficulties: Array.isArray(parsed.selectedDifficulties) ? parsed.selectedDifficulties : defaults.selectedDifficulties,
         selectedBooks: Array.isArray(parsed.selectedBooks) ? parsed.selectedBooks : [],
-        selectedCategories: Array.isArray(parsed.selectedCategories) ? parsed.selectedCategories : [],
+        selectedCategories,
+        categorySelections,
+        categoryDefaultSelected,
         categoryMode: parsed.categoryMode === "custom" ? "custom" : "all",
       };
     } catch {
@@ -358,7 +426,7 @@
 
     app.settings.questionCount = cleanQuestionCount(app.settings.questionCount);
     app.settings.selectedDifficulties = unique(app.settings.selectedDifficulties).filter((d) => validDiffSet.has(d));
-    if (app.settings.selectedDifficulties.length === 0) {
+    if (firstLoad && !app.settingsLoaded && app.settings.selectedDifficulties.length === 0) {
       app.settings.selectedDifficulties = [...DIFFICULTY_ORDER];
     }
 
@@ -375,13 +443,20 @@
 
   function reconcileCategories() {
     const available = availableCategoriesForSelectedBooks();
-    const availableSet = new Set(available);
-
-    if (app.settings.categoryMode === "all") {
-      app.settings.selectedCategories = available;
-    } else {
-      app.settings.selectedCategories = unique(app.settings.selectedCategories).filter((cat) => availableSet.has(cat));
+    if (!app.settings.categorySelections || typeof app.settings.categorySelections !== "object") {
+      app.settings.categorySelections = {};
     }
+    if (typeof app.settings.categoryDefaultSelected !== "boolean") {
+      app.settings.categoryDefaultSelected = app.settings.categoryMode !== "custom";
+    }
+
+    available.forEach((category) => {
+      if (!Object.prototype.hasOwnProperty.call(app.settings.categorySelections, category)) {
+        app.settings.categorySelections[category] = app.settings.categoryDefaultSelected;
+      }
+    });
+
+    app.settings.selectedCategories = available.filter((category) => app.settings.categorySelections[category] !== false);
   }
 
   function renderSetup() {
@@ -407,11 +482,15 @@
 
   function renderBookGrid() {
     const selected = new Set(app.settings.selectedBooks);
-    els.bookGrid.innerHTML = app.books.map((book) => `
-      <button type="button" class="bookBtn" data-book="${escapeAttr(book.id)}" aria-checked="${selected.has(book.id) ? "true" : "false"}" title="${escapeAttr(book.name)}">
-        ${escapeHtml(book.short)}
-      </button>
-    `).join("");
+    els.bookGrid.innerHTML = app.books.map((book) => {
+      const rgb = bookGroupRgb(book.id, book.testament);
+      const style = `--bookSoft:${rgba(rgb, SOFT_A)};--bookStrong:${rgba(rgb, STRONG_A)};`;
+      return `
+        <button type="button" class="bookBtn" data-book="${escapeAttr(book.id)}" aria-checked="${selected.has(book.id) ? "true" : "false"}" title="${escapeAttr(book.name)}" style="${style}">
+          ${escapeHtml(book.short)}
+        </button>
+      `;
+    }).join("");
   }
 
   function renderCategoryChips() {
@@ -463,12 +542,13 @@
   }
 
   function toggleCategory(category) {
-    const selected = new Set(app.settings.selectedCategories);
-    if (selected.has(category)) selected.delete(category);
-    else selected.add(category);
-
     app.settings.categoryMode = "custom";
-    app.settings.selectedCategories = availableCategoriesForSelectedBooks().filter((cat) => selected.has(cat));
+    if (!app.settings.categorySelections || typeof app.settings.categorySelections !== "object") {
+      app.settings.categorySelections = {};
+    }
+    const selected = app.settings.categorySelections[category] !== false;
+    app.settings.categorySelections[category] = !selected;
+    reconcileCategories();
     saveSettings();
     renderCategoryChips();
     updateAvailablePreview();
@@ -695,14 +775,15 @@
     const minutes = Math.floor(seconds / 60);
     const restSeconds = seconds % 60;
     const timeLabel = minutes > 0 ? `${minutes}:${String(restSeconds).padStart(2, "0")}` : `${seconds}s`;
+    const stars = calculateStars(app.quiz.questions.length, app.quiz.totalAnswers);
 
-    els.resultText.textContent = `${app.quiz.questions.length} korrekt abgeschlossen.`;
+    els.resultText.textContent = "";
     els.resultStats.innerHTML = [
       statTile(app.quiz.questions.length, "Fragen"),
       statTile(app.quiz.wrongAnswers, "Fehler"),
       statTile(timeLabel, "Zeit"),
     ].join("");
-    els.resultBadge.textContent = app.quiz.wrongAnswers === 0 ? "✓" : "↻";
+    els.resultBadge.innerHTML = starRatingHtml(stars);
     setView("result");
   }
 
@@ -719,6 +800,7 @@
     els.viewQuiz.classList.toggle("hidden", view !== "quiz");
     els.viewResult.classList.toggle("hidden", view !== "result");
 
+    els.topbar.classList.toggle("hidden", view === "home");
     els.btnBack.classList.toggle("hidden", view === "home");
     els.btnAbort.classList.toggle("hidden", view !== "quiz");
 
@@ -747,6 +829,24 @@
     els.topbar.style.setProperty("--barPct", `${pct}%`);
   }
 
+  function calculateStars(questionCount, totalAnswers) {
+    if (!questionCount || !totalAnswers) return 0;
+    const raw = (questionCount / totalAnswers) * 5;
+    return Math.max(0.5, Math.min(5, Math.round(raw * 2) / 2));
+  }
+
+  function starRatingHtml(stars) {
+    const pct = Math.max(0, Math.min(100, (stars / 5) * 100));
+    const label = Number.isInteger(stars) ? String(stars) : String(stars).replace(".", ",");
+    return `
+      <div class="starRating" role="img" aria-label="${escapeAttr(label)} von 5 Sternen">
+        <span class="starsBase" aria-hidden="true">★★★★★</span>
+        <span class="starsFill" aria-hidden="true" style="width:${pct}%">★★★★★</span>
+      </div>
+      <div class="starScore">${escapeHtml(label)}/5</div>
+    `;
+  }
+
   function statTile(value, label) {
     return `
       <div class="statTile">
@@ -754,6 +854,16 @@
         <div class="statLabel">${escapeHtml(label)}</div>
       </div>
     `;
+  }
+
+  function bookGroupRgb(bookId, testament) {
+    const group = BOOK_GROUP_BY_ID.get(bookId) || (testament === "at" ? "AT Geschichte" : "Evangelien");
+    return GROUP_RGB[group] || [200, 200, 200];
+  }
+
+  function rgba(rgb, alpha) {
+    const [r, g, b] = rgb;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   function labelDifficulty(value) {
@@ -778,6 +888,15 @@
       ["1. Johannes", "1 Joh"], ["2. Johannes", "2 Joh"], ["3. Johannes", "3 Joh"], ["Offenbarung", "Offb"],
     ]);
     return map.get(name) || name;
+  }
+
+  function normalizeSelectionMap(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(
+      Object.entries(value)
+        .map(([key, val]) => [String(key).trim(), val !== false])
+        .filter(([key]) => key)
+    );
   }
 
   function cleanQuestionCount(value) {
