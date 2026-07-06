@@ -836,14 +836,34 @@
   }
 
   function starRatingHtml(stars) {
-    const pct = Math.max(0, Math.min(100, (stars / 5) * 100));
-    const label = Number.isInteger(stars) ? String(stars) : String(stars).replace(".", ",");
+    const safeStars = Math.max(0, Math.min(5, stars));
+    const label = Number.isInteger(safeStars) ? String(safeStars) : String(safeStars).replace(".", ",");
+    const items = Array.from({ length: 5 }, (_, index) => {
+      const fill = Math.max(0, Math.min(1, safeStars - index));
+      return starSvgHtml(Math.round(fill * 100));
+    }).join("");
+
     return `
-      <div class="starRating" role="img" aria-label="${escapeAttr(label)} von 5 Sternen">
-        <span class="starsBase" aria-hidden="true">★★★★★</span>
-        <span class="starsFill" aria-hidden="true" style="width:${pct}%">★★★★★</span>
-      </div>
+      <div class="starRating" role="img" aria-label="${escapeAttr(label)} von 5 Sternen">${items}</div>
       <div class="starScore">${escapeHtml(label)}/5</div>
+    `;
+  }
+
+  function starSvgHtml(fillPct) {
+    const path = "M12 1.8l3.05 6.18 6.82.99-4.94 4.82 1.17 6.79L12 17.38l-6.1 3.2 1.17-6.79-4.94-4.82 6.82-.99L12 1.8z";
+    const width = Math.max(0, Math.min(100, fillPct));
+
+    return `
+      <span class="starBox" aria-hidden="true">
+        <svg class="starSvg starEmpty" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="${path}" fill="currentColor"></path>
+        </svg>
+        <span class="starClip" style="width:${width}%">
+          <svg class="starSvg starFull" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+            <path d="${path}" fill="currentColor"></path>
+          </svg>
+        </span>
+      </span>
     `;
   }
 

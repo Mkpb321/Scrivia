@@ -29,8 +29,9 @@ body{
   background:var(--bg);
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
+  caret-color:transparent;
 }
-button,input{font:inherit;color:inherit}
+button,input{font:inherit;color:inherit;caret-color:transparent}
 button{
   -webkit-appearance:none;
   appearance:none;
@@ -39,6 +40,7 @@ button{
   padding:0;
   touch-action:manipulation;
   cursor:pointer;
+  caret-color:transparent;
 }
 button:disabled{cursor:not-allowed;opacity:.52}
 .hidden{display:none!important}
@@ -103,7 +105,7 @@ p{margin:0;color:var(--muted);line-height:1.42}
 .chipBtn[data-difficulty="leicht"]{--chipSoft:rgba(122,230,185,.35);--chipStrong:rgba(122,230,185,1)}
 .chipBtn[data-difficulty="mittel"]{--chipSoft:rgba(255,195,120,.40);--chipStrong:rgba(255,195,120,1)}
 .chipBtn[data-difficulty="schwer"]{--chipSoft:rgba(255,145,145,.35);--chipStrong:rgba(255,145,145,1)}
-.bookGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:264px;overflow:auto;padding-right:1px}
+.bookGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-right:0}
 .bookBtn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .formError{min-height:18px;font-size:12px;color:rgba(21,19,43,.78);padding:0 2px;font-weight:750}
 .actionsRow{display:flex;gap:10px;padding:2px 2px 0}
@@ -126,11 +128,15 @@ p{margin:0;color:var(--muted);line-height:1.42}
 .referenceLine{margin-top:9px;font-size:12px;font-weight:800;color:rgba(21,19,43,.62)}
 
 .resultCard{text-align:center;padding:22px 14px 16px;background:var(--surfaceSofter)}
-.resultBadge{display:grid;justify-items:center;gap:5px;margin:0 auto 14px;font-weight:1000}
-.starRating{position:relative;display:inline-block;font-size:34px;line-height:1;letter-spacing:1px;white-space:nowrap}
-.starsBase{color:rgba(21,19,43,.12)}
-.starsFill{position:absolute;inset:0 auto 0 0;overflow:hidden;color:#ffc857;white-space:nowrap}
-.starScore{font-size:12px;color:rgba(21,19,43,.70);font-weight:950;font-variant-numeric:tabular-nums}
+.resultBadge{display:grid;justify-items:center;gap:5px;margin:0 auto 14px;font-weight:1000;user-select:none;caret-color:transparent}
+.starRating{display:flex;justify-content:center;align-items:center;gap:3px;line-height:1;user-select:none;caret-color:transparent;pointer-events:none}
+.starRating *{user-select:none;caret-color:transparent}
+.starBox{position:relative;display:inline-block;width:34px;height:34px;flex:0 0 34px}
+.starSvg{position:absolute;inset:0;width:34px;height:34px;display:block}
+.starEmpty{color:rgba(21,19,43,.12)}
+.starClip{position:absolute;inset:0 auto 0 0;overflow:hidden;display:block;height:34px}
+.starFull{color:#ffc857}
+.starScore{font-size:12px;color:rgba(21,19,43,.70);font-weight:950;font-variant-numeric:tabular-nums;user-select:none;caret-color:transparent}
 #resultText:empty{display:none}
 .resultStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px;text-align:left}
 .statTile{background:#fff;border-radius:12px;padding:10px;min-height:62px}
