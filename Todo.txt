@@ -1,0 +1,36 @@
+links zu bibelserver in den erklährungen
+
+
+
+https://chatgpt.com/c/6a4beb4f-092c-83eb-ab51-bd087801e756
+
+fragen
+https://chatgpt.com/c/6a4c03ff-10cc-83ed-9d93-14b1873433fa
+
+# Erste Notizen
+
+Cool gemachte bibel quiz app, die man gpt freundlich mit fragen füttern kann. Dann mit gpt für jedes buch fragen generieren auf verschiedenen schwierigkeitsstufen und „arten von fragen“ csv wo schwierigkeit und art eine spalte idt und buch und frage und antwort. Dann immer das generieren was ich gerade lese. Bibeltext am besten mitgeben. Eine frageart nach bibelstellen beide richtungen der wichtigsten verse des buches. Bei antwort erklährung mit vershinweis. auch fragen zu versen aber jeweils nur die allerwichtigsten.
+
+Kategorien finden
+
+schwierigkeitsgrade?
+
+modell des csv?
+
+formate? (mehr als multiple choice?)
+
+immer erklägrung dazu
+
+für fragen generierung
+klare Faktenfragen, keine theologische Streitfragen
+evangelikal/freikirchlich geprägt, aber breit konservativ anschlussfähig
+
+
+
+zukunft:
+falsch beantwortete wiederholen (spaced repetition)
+Serie/Streak
+statistiken
+mehrere können richtig sein
+
+

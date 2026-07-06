@@ -49,9 +49,8 @@ button:disabled{cursor:not-allowed;opacity:.52}
 .view{padding-top:8px}
 
 .topbar{
-  position:sticky;
-  top:8px;
-  z-index:20;
+  position:relative;
+  z-index:1;
   display:grid;
   grid-template-columns:40px 1fr auto;
   align-items:center;
