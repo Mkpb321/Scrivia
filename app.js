@@ -759,8 +759,31 @@
     els.feedback.className = `feedback panel ${isCorrect ? "good" : "bad"}`;
     els.feedbackTitle.textContent = isCorrect ? "Richtig" : "Falsch";
     els.feedbackText.textContent = q.explanation;
-    els.referenceLine.textContent = q.reference ? q.reference : "";
+    renderReference(q.reference);
     updateTopbar();
+  }
+
+  function renderReference(reference) {
+    const label = String(reference || "").trim();
+    if (!label) {
+      els.referenceLine.textContent = "";
+      return;
+    }
+
+    const url = bibleServerUrl(label);
+    els.referenceLine.innerHTML = `
+      <a class="referenceLink" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">
+        ${escapeHtml(label)}
+      </a>
+    `;
+  }
+
+  function bibleServerUrl(reference) {
+    const compactRef = String(reference || "")
+      .trim()
+      .replace(/\s+/g, "");
+
+    return `https://www.bibleserver.com/SLT/${encodeURIComponent(compactRef)}`;
   }
 
   function spacedDelay(wrongs, openCount) {

@@ -69,8 +69,8 @@ button:disabled{cursor:not-allowed;opacity:.52}
 #btnBack{margin-left:8px;background:#fff}
 #btnAbort{background:var(--btnBg)}
 
-.brandCard{display:grid;justify-items:center;gap:12px;padding:58px 0 30px}
-.brandMark{width:72px;height:72px;border-radius:20px;background:var(--btnBg);display:grid;place-items:center;font-weight:1000;font-size:36px;letter-spacing:-1px;color:var(--text)}
+.brandCard{display:grid;justify-items:center;padding:48px 0 28px}
+.brandLogo{width:168px;height:168px;display:block;border-radius:28px;object-fit:contain;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 10px 26px rgba(142,125,255,.10))}
 h1{font-size:30px;line-height:1.05;margin:0;font-weight:1000;letter-spacing:-.7px}
 h2{font-size:22px;line-height:1.16;margin:0;font-weight:980;letter-spacing:-.25px}
 p{margin:0;color:var(--muted);line-height:1.42}
@@ -125,6 +125,8 @@ p{margin:0;color:var(--muted);line-height:1.42}
 .feedback.good .feedbackTitle{color:#23633a}
 .feedback.bad .feedbackTitle{color:#8a3333}
 .referenceLine{margin-top:9px;font-size:12px;font-weight:800;color:rgba(21,19,43,.62)}
+.referenceLink{color:inherit;text-decoration:none;border-bottom:1px solid rgba(21,19,43,.28);padding-bottom:1px}
+.referenceLink:active{background:var(--btnBg);border-radius:6px}
 
 .resultCard{text-align:center;padding:22px 14px 16px;background:var(--surfaceSofter)}
 .resultBadge{display:grid;justify-items:center;gap:5px;margin:0 auto 14px;font-weight:1000;user-select:none;caret-color:transparent}
