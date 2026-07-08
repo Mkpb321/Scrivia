@@ -4,6 +4,7 @@
   const STORAGE_KEY = "scrivia_settings_v4";
   const DIFFICULTY_ORDER = ["leicht", "mittel", "schwer"];
   const TESTAMENT_LABEL = { at: "AT", nt: "NT" };
+  const BOOK_SCOPE_CHAPTER = "__book";
   const SOFT_A = 0.35;
   const STRONG_A = 1;
 
@@ -52,6 +53,7 @@
     questions: [],
     books: [],
     categoriesByBook: new Map(),
+    chaptersByBook: new Map(),
     settings: null,
     settingsLoaded: false,
     quiz: null,
@@ -76,7 +78,7 @@
       "viewHome", "viewSetup", "viewQuiz", "viewResult",
       "btnNewQuiz", "loadHint", "setupForm", "availableLine", "questionCount",
       "difficultyChips", "btnDifficultyAll", "bookGrid", "btnBooksAll", "btnBooksAT", "btnBooksNT", "btnBooksNone",
-      "categoryChips", "btnCategoriesAll", "btnCategoriesNone", "setupError", "btnSetupCancel", "btnStartQuiz",
+      "chapterAccordions", "categoryChips", "btnCategoriesAll", "btnCategoriesNone", "setupError", "btnSetupCancel", "btnStartQuiz",
       "questionKicker", "questionText", "choices", "feedback", "feedbackTitle", "feedbackText", "referenceLine", "btnNext",
       "resultText", "resultStats", "btnResultSetup", "btnResultAgain", "resultBadge"
     ];
@@ -135,6 +137,24 @@
       const bookBtn = e.target.closest("[data-book]");
       if (bookBtn) {
         toggleBook(bookBtn.dataset.book);
+        return;
+      }
+
+      const chapterAllBtn = e.target.closest("[data-chapter-all]");
+      if (chapterAllBtn) {
+        setChaptersForBook(chapterAllBtn.dataset.chapterAll, true);
+        return;
+      }
+
+      const chapterNoneBtn = e.target.closest("[data-chapter-none]");
+      if (chapterNoneBtn) {
+        setChaptersForBook(chapterNoneBtn.dataset.chapterNone, false);
+        return;
+      }
+
+      const chapterBtn = e.target.closest("[data-chapter]");
+      if (chapterBtn) {
+        toggleChapter(chapterBtn.dataset.chapterBook, chapterBtn.dataset.chapter);
         return;
       }
 
@@ -326,6 +346,7 @@
       q.category = q.category || "Allgemein";
       q.difficulty = normalizeToken(q.difficulty || "mittel");
       q.chapter = q.chapter ? String(q.chapter).trim() : "";
+      q.chapterKey = chapterKey(q.chapter, q.scope);
       q.choicesList = choices;
 
       seenIds.add(q.id);
@@ -338,6 +359,7 @@
   function buildIndexes() {
     const bookMap = new Map();
     const categoryMap = new Map();
+    const chapterMap = new Map();
 
     app.questions.forEach((q) => {
       if (!bookMap.has(q.book_id)) {
@@ -351,6 +373,9 @@
 
       if (!categoryMap.has(q.book_id)) categoryMap.set(q.book_id, new Set());
       categoryMap.get(q.book_id).add(q.category);
+
+      if (!chapterMap.has(q.book_id)) chapterMap.set(q.book_id, new Set());
+      chapterMap.get(q.book_id).add(q.chapterKey);
     });
 
     app.books = [...bookMap.values()].sort((a, b) => {
@@ -365,6 +390,10 @@
     app.categoriesByBook = new Map(
       [...categoryMap.entries()].map(([bookId, categories]) => [bookId, [...categories].sort(sortDe)])
     );
+
+    app.chaptersByBook = new Map(
+      [...chapterMap.entries()].map(([bookId, chapters]) => [bookId, [...chapters].sort(sortChapters)])
+    );
   }
 
   function loadSettings() {
@@ -376,6 +405,7 @@
       categorySelections: {},
       categoryDefaultSelected: true,
       categoryMode: "all",
+      chapterSelections: {},
     };
 
     try {
@@ -405,6 +435,7 @@
         categorySelections,
         categoryDefaultSelected,
         categoryMode: parsed.categoryMode === "custom" ? "custom" : "all",
+        chapterSelections: normalizeNestedSelectionMap(parsed.chapterSelections),
       };
     } catch {
       return defaults;
@@ -438,7 +469,27 @@
       // Keep an intentionally empty saved selection.
     }
 
+    reconcileChapters();
     reconcileCategories();
+  }
+
+  function reconcileChapters() {
+    if (!app.settings.chapterSelections || typeof app.settings.chapterSelections !== "object" || Array.isArray(app.settings.chapterSelections)) {
+      app.settings.chapterSelections = {};
+    }
+
+    app.settings.selectedBooks.forEach((bookId) => {
+      const available = app.chaptersByBook.get(bookId) || [];
+      if (!app.settings.chapterSelections[bookId] || typeof app.settings.chapterSelections[bookId] !== "object" || Array.isArray(app.settings.chapterSelections[bookId])) {
+        app.settings.chapterSelections[bookId] = {};
+      }
+
+      available.forEach((chapter) => {
+        if (!Object.prototype.hasOwnProperty.call(app.settings.chapterSelections[bookId], chapter)) {
+          app.settings.chapterSelections[bookId][chapter] = true;
+        }
+      });
+    });
   }
 
   function reconcileCategories() {
@@ -465,6 +516,7 @@
     els.questionCount.value = String(app.settings.questionCount);
     renderDifficultyChips();
     renderBookGrid();
+    renderChapterAccordions();
     renderCategoryChips();
     updateAvailablePreview();
     updateTopbar();
@@ -489,6 +541,47 @@
         <button type="button" class="bookBtn" data-book="${escapeAttr(book.id)}" aria-checked="${selected.has(book.id) ? "true" : "false"}" title="${escapeAttr(book.name)}" style="${style}">
           ${escapeHtml(book.short)}
         </button>
+      `;
+    }).join("");
+  }
+
+  function renderChapterAccordions() {
+    reconcileChapters();
+    const openBookIds = new Set([...els.chapterAccordions.querySelectorAll(".chapterGroup")].filter((details) => details.open).map((details) => details.dataset.bookChapters));
+    const selectedBookIds = app.settings.selectedBooks.filter((id) => app.chaptersByBook.has(id));
+
+    if (selectedBookIds.length === 0) {
+      els.chapterAccordions.innerHTML = `<div class="formError">Keine Bücher</div>`;
+      return;
+    }
+
+    els.chapterAccordions.innerHTML = selectedBookIds.map((bookId, index) => {
+      const book = app.books.find((b) => b.id === bookId);
+      const chapters = app.chaptersByBook.get(bookId) || [];
+      const selections = app.settings.chapterSelections[bookId] || {};
+      const selectedCount = chapters.filter((chapter) => selections[chapter] !== false).length;
+      const rgb = bookGroupRgb(bookId, book ? book.testament : "at");
+      const style = `--bookSoft:${rgba(rgb, SOFT_A)};--bookStrong:${rgba(rgb, STRONG_A)};`;
+      const shouldOpen = openBookIds.size > 0 ? openBookIds.has(bookId) : selectedBookIds.length === 1 || index === 0;
+      const openAttr = shouldOpen ? " open" : "";
+      const buttons = chapters.map((chapter) => `
+        <button type="button" class="chapterBtn" data-chapter-book="${escapeAttr(bookId)}" data-chapter="${escapeAttr(chapter)}" aria-checked="${selections[chapter] !== false ? "true" : "false"}">
+          ${escapeHtml(chapterLabel(chapter))}
+        </button>
+      `).join("");
+
+      return `
+        <details class="chapterGroup" data-book-chapters="${escapeAttr(bookId)}" style="${style}"${openAttr}>
+          <summary class="chapterSummary">
+            <span>${escapeHtml(book ? book.name : bookId)}</span>
+            <span class="chapterMeta">${selectedCount}/${chapters.length}</span>
+          </summary>
+          <div class="chapterToolbar">
+            <button type="button" class="miniBtn" data-chapter-all="${escapeAttr(bookId)}">Alle</button>
+            <button type="button" class="miniBtn ghost" data-chapter-none="${escapeAttr(bookId)}">Keine</button>
+          </div>
+          <div class="chapterGrid">${buttons}</div>
+        </details>
       `;
     }).join("");
   }
@@ -534,9 +627,11 @@
     else selected.add(bookId);
 
     app.settings.selectedBooks = app.books.map((b) => b.id).filter((id) => selected.has(id));
+    reconcileChapters();
     reconcileCategories();
     saveSettings();
     renderBookGrid();
+    renderChapterAccordions();
     renderCategoryChips();
     updateAvailablePreview();
   }
@@ -554,6 +649,37 @@
     updateAvailablePreview();
   }
 
+  function toggleChapter(bookId, chapter) {
+    if (!bookId || !chapter) return;
+    if (!app.settings.chapterSelections[bookId] || typeof app.settings.chapterSelections[bookId] !== "object") {
+      app.settings.chapterSelections[bookId] = {};
+    }
+
+    const selected = app.settings.chapterSelections[bookId][chapter] !== false;
+    app.settings.chapterSelections[bookId][chapter] = !selected;
+    reconcileChapters();
+    saveSettings();
+    renderChapterAccordions();
+    updateAvailablePreview();
+  }
+
+  function setChaptersForBook(bookId, selected) {
+    if (!bookId) return;
+    const chapters = app.chaptersByBook.get(bookId) || [];
+    if (!app.settings.chapterSelections[bookId] || typeof app.settings.chapterSelections[bookId] !== "object") {
+      app.settings.chapterSelections[bookId] = {};
+    }
+
+    chapters.forEach((chapter) => {
+      app.settings.chapterSelections[bookId][chapter] = !!selected;
+    });
+
+    reconcileChapters();
+    saveSettings();
+    renderChapterAccordions();
+    updateAvailablePreview();
+  }
+
   function setBooksByMode(mode) {
     if (mode === "all") {
       app.settings.selectedBooks = app.books.map((b) => b.id);
@@ -565,11 +691,22 @@
       app.settings.selectedBooks = [];
     }
 
+    reconcileChapters();
     reconcileCategories();
     saveSettings();
     renderBookGrid();
+    renderChapterAccordions();
     renderCategoryChips();
     updateAvailablePreview();
+  }
+
+  function isChapterSelected(bookId, chapter) {
+    const chapters = app.chaptersByBook.get(bookId) || [];
+    if (chapters.length === 0) return true;
+    const key = chapter || BOOK_SCOPE_CHAPTER;
+    const selections = app.settings.chapterSelections?.[bookId];
+    if (!selections || typeof selections !== "object") return true;
+    return selections[key] !== false;
   }
 
   function availableCategoriesForSelectedBooks() {
@@ -607,6 +744,7 @@
       selectedBooks.has(q.book_id)
       && selectedDifficulties.has(q.difficulty)
       && selectedCategories.has(q.category)
+      && isChapterSelected(q.book_id, q.chapterKey)
     ));
   }
 
@@ -623,6 +761,7 @@
       els.setupError.textContent = "Keine Treffer";
       renderDifficultyChips();
       renderBookGrid();
+      renderChapterAccordions();
       renderCategoryChips();
       updateAvailablePreview();
       return;
@@ -931,6 +1070,38 @@
       ["1. Johannes", "1 Joh"], ["2. Johannes", "2 Joh"], ["3. Johannes", "3 Joh"], ["Offenbarung", "Offb"],
     ]);
     return map.get(name) || name;
+  }
+
+  function chapterKey(chapter, scope) {
+    const value = String(chapter || "").trim();
+    if (!value || normalizeToken(scope) === "book") return value || BOOK_SCOPE_CHAPTER;
+    return value;
+  }
+
+  function chapterLabel(chapter) {
+    return chapter === BOOK_SCOPE_CHAPTER ? "Allgemein" : String(chapter);
+  }
+
+  function sortChapters(a, b) {
+    if (a === BOOK_SCOPE_CHAPTER && b !== BOOK_SCOPE_CHAPTER) return -1;
+    if (b === BOOK_SCOPE_CHAPTER && a !== BOOK_SCOPE_CHAPTER) return 1;
+    const an = Number(String(a).match(/^\d+/)?.[0]);
+    const bn = Number(String(b).match(/^\d+/)?.[0]);
+    if (Number.isFinite(an) && Number.isFinite(bn) && an !== bn) return an - bn;
+    if (Number.isFinite(an) && !Number.isFinite(bn)) return -1;
+    if (!Number.isFinite(an) && Number.isFinite(bn)) return 1;
+    return sortDe(a, b);
+  }
+
+  function normalizeNestedSelectionMap(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const result = {};
+    Object.entries(value).forEach(([outerKey, innerValue]) => {
+      const key = String(outerKey).trim();
+      if (!key || !innerValue || typeof innerValue !== "object" || Array.isArray(innerValue)) return;
+      result[key] = normalizeSelectionMap(innerValue);
+    });
+    return result;
   }
 
   function normalizeSelectionMap(value) {
